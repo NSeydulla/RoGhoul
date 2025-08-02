@@ -30,6 +30,10 @@ TabGroup:AddToggle("CCGHESP", {
     Text = "Highlight",
     Default = false,
     Callback = function(Value)
+        if Script.Connections.ESPCCG then
+            Script.Connections.ESPCCG:Disconnect()
+            Script.Connections.ESPCCG = nil
+        end
         if Value then
             for _, obj in workspace.NPCSpawns:GetDescendants() do
                 ApplyHESP(obj)

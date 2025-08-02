@@ -30,6 +30,10 @@ TabGroup:AddToggle("AogiriHESP", {
     Text = "Aogiri",
     Default = false,
     Callback = function(Value)
+        if Script.Connections.ESPAogiri then
+            Script.Connections.ESPAogiri:Disconnect()
+            Script.Connections.ESPAogiri = nil
+        end
         if Value then
             for _, obj in workspace.NPCSpawns:GetDescendants() do
                 ApplyHESP(obj)
