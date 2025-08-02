@@ -46,12 +46,12 @@ return {
                 end
             end)
         end
-        for _, espType in pairs(Script.HighlightESPTable) do
+        for _, espType in pairs(Script.HighlightESPTables) do
             for _, esp in pairs(espType) do
                 pcall(esp.Destroy)
             end
         end
-        for _, espType in pairs(Script.TextESPTable) do
+        for _, espType in pairs(Script.TextESPTables) do
             for _, esp in pairs(espType) do
                 pcall(esp.Destroy)
             end
@@ -85,36 +85,40 @@ return {
 end
 
 local ESP = function(...)
-local Script: ScriptType, _: Obsidian = ...
+local Script: ScriptType, Library: Obsidian = ...
 local RunService = game:GetService("RunService")
 
 return {
     HighlightESP = function(args: HighlightESPArgs): HighlightESP?
-        if not args.Object then
-            return Script.Functions.Alert("ESP Object is nil")
+        if not args.Object or not args.Object:IsA("Model") then
+            return Script.Functions.Alert("ESP Object is nil or not Model")
         end
 
         local self: HighlightESP = {
             Type = args.Type or "None",
             Object = args.Object,
             Color = args.Color or Color3.new(),
+            FillTransparency = Library.Options.ESPFillTransparency.Value,
+            OutlineTransparency = Library.Options.ESPOutlineTransparency.Value,
             Highlights = {},
             Connections = {},
             Destroy = function() end,
             SetColor = function() end,
             GiveSignal = function() end,
+            SetFillTransparency = function() end,
+            SetOutlineTransparency = function() end,
         }
 
-        local tableIndex = #Script.HighlightESPTable[self.Type] + 1
+        local tableIndex = #Script.HighlightESPTables[self.Type] + 1
 
         local highlight = Instance.new("Highlight")
         do
             highlight.Adornee = self.Object
             highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
             highlight.FillColor = self.Color
-            highlight.FillTransparency = 0.5
+            highlight.FillTransparency = self.FillTransparency
             highlight.OutlineColor = self.Color
-            highlight.OutlineTransparency = 0.5
+            highlight.OutlineTransparency = self.OutlineTransparency
             highlight.Enabled = true
             highlight.Parent = self.Object
         end
@@ -130,6 +134,22 @@ return {
             end
         end
 
+        self.SetFillTransparency = function(newTransparency: number)
+            self.FillTransparency = newTransparency
+
+            for _, highlight in pairs(self.Highlights) do
+                highlight.FillTransparency = newTransparency
+            end
+        end
+
+        self.SetOutlineTransparency = function(newTransparency: number)
+            self.OutlineTransparency = newTransparency
+
+            for _, highlight in pairs(self.Highlights) do
+                highlight.OutlineTransparency = newTransparency
+            end
+        end
+
         self.Destroy = function()
             for _, conn in pairs(self.Connections) do
                 pcall(function()
@@ -140,8 +160,8 @@ return {
             for _, highlight in pairs(self.Highlights) do
                 highlight:Destroy()
             end
-            if Script.HighlightESPTable[self.Type][tableIndex] then
-                Script.HighlightESPTable[self.Type][tableIndex] = nil
+            if Script.HighlightESPTables[self.Type][tableIndex] then
+                Script.HighlightESPTables[self.Type][tableIndex] = nil
             end
         end
 
@@ -156,7 +176,7 @@ return {
             end
         end))
 
-        Script.HighlightESPTable[self.Type][tableIndex] = self
+        Script.HighlightESPTables[self.Type][tableIndex] = self
         return self
     end,
 }
@@ -189,44 +209,231 @@ TabGroup:AddButton("TP back", function()
 end)
 end,
 
-FOV = function(...)
+ESPAogiri = function(...)
 local TabGroup: ObsidianGroupBox, Script: ScriptType, Library: Obsidian = ...
 
-local function ChangeFOV(_)
-    if not workspace.CurrentCamera then
-        Script.Functions.Alert("Camera instance not found :(")
+local NamesAogiri = {
+    ["High Rank Aogiri Member"] = true,
+    ["Mid Rank Aogiri Member"] = true,
+    ["Low Rank Aogiri Member"] = true,
+}
+
+TabGroup:AddLabel(""):AddColorPicker("AogiriESPColor", {
+    Default = Color3.fromRGB(146, 56, 56),
+    Callback = function(Value)
+        for _, esp in pairs(Script.HighlightESPTables["Aogiri"]) do
+            esp.SetColor(Value)
+        end
+    end,
+})
+
+local function ApplyHESP(model: Model)
+    if not NamesAogiri[model.Name] then
+        return
     end
-    if Library.Toggles.FOVToggle.Value then
-        workspace.CurrentCamera.FieldOfView = Library.Options.FOVSlider.Value :: number
-        Script.Temp.OldFOV = workspace.CurrentCamera.FieldOfView
-    else
-        workspace.CurrentCamera.FieldOfView = Script.Temp.OldFOV
-        Script.Temp.OldFOV = nil
+    Script.ESP.HighlightESP({
+        Type = "Aogiri",
+        Object = model,
+        Color = Library.Options.AogiriESPColor.Value,
+    })
+end
+
+TabGroup:AddToggle("AogiriHESP", {
+    Text = "Aogiri",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            for _, obj in workspace.NPCSpawns:GetDescendants() do
+                ApplyHESP(obj)
+            end
+            Script.Connections.ESPAogiri = workspace.NPCSpawns.DescendantAdded:Connect(function(newObj)
+                task.delay(0.1, function()
+                    ApplyHESP(newObj)
+                end)
+            end)
+        else
+            for _, esp in pairs(Script.HighlightESPTables["Aogiri"]) do
+                esp.Destroy()
+            end
+        end
+    end,
+})
+
+local function ApplyTESP(obj)
+    if NamesAogiri[obj.Name] then
+        local humanoid = obj:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.NameDisplayDistance = Library.Options.AogiriTESPDist.Value
+            humanoid.HealthDisplayDistance = Library.Options.AogiriTESPDist.Value
+        end
     end
 end
 
-TabGroup:AddToggle("FOVToggle", {
-    Text = "FOV",
+TabGroup:AddToggle("AogiriTESP", {
+    Text = "Text",
     Default = false,
-    Callback = ChangeFOV,
+    Callback = function(Value)
+        if Script.Connections.AogiriTESP then
+            Script.Connections.AogiriTESP:Disconnect()
+            Script.Connections.AogiriTESP = nil
+        end
+        if Value then
+            for _, descendant in pairs(workspace.NPCSpawns:GetDescendants()) do
+                ApplyTESP(descendant)
+            end
+            Script.Connections.AogiriTESP = workspace.NPCSpawns.DescendantAdded:Connect(function(newObj)
+                task.delay(0.1, function()
+                    ApplyTESP(newObj)
+                end)
+            end)
+        else
+            for _, descendant in pairs(workspace.NPCSpawns:GetDescendants()) do
+                if NamesAogiri[descendant.Name] then
+                    local humanoid = descendant:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid.NameDisplayDistance = 100
+                        humanoid.HealthDisplayDistance = 100
+                    end
+                end
+            end
+        end
+    end,
 })
 
-TabGroup:AddSlider("FOVSlider", {
-    Text = "FOV",
-    Default = 60,
-    Min = 10,
-    Max = 120,
-    Rounding = 1,
-    Callback = ChangeFOV,
+TabGroup:AddSlider("AogiriTESPDist", {
+    Text = "Text distance",
+    Default = 100,
+    Min = 0,
+    Max = 5000,
+    Rounding = 0,
+    Callback = function(Value)
+        for _, descendant in pairs(workspace.NPCSpawns:GetDescendants()) do
+            ApplyTESP(descendant)
+        end
+    end,
 })
 end,
 
-MainESP = function(...)
+ESPCCG = function(...)
+local TabGroup: ObsidianGroupBox, Script: ScriptType, Library: Obsidian = ...
+
+local NamesCCG = {
+    ["First Class Investigator"] = true,
+    ["Rank 1 Investigator"] = true,
+    ["Rank 2 Investigator"] = true,
+}
+
+TabGroup:AddLabel("Color"):AddColorPicker("CCGESPColor", {
+    Default = Color3.fromRGB(130, 245, 255),
+    Callback = function(Value)
+        for _, esp in pairs(Script.HighlightESPTables["CCG"]) do
+            esp.SetColor(Value)
+        end
+    end,
+})
+
+local function ApplyHESP(model: Model)
+    if not NamesCCG[model.Name] then
+        return
+    end
+    Script.ESP.HighlightESP({
+        Type = "CCG",
+        Object = model,
+        Color = Library.Options.CCGESPColor.Value,
+    })
+end
+
+TabGroup:AddToggle("CCGHESP", {
+    Text = "Highlight",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            for _, obj in workspace.NPCSpawns:GetDescendants() do
+                ApplyHESP(obj)
+            end
+            Script.Connections.ESPCCG = workspace.NPCSpawns.DescendantAdded:Connect(function(newObj)
+                task.delay(0.1, function()
+                    ApplyHESP(newObj)
+                end)
+            end)
+        else
+            for _, esp in pairs(Script.HighlightESPTables["CCG"]) do
+                esp.Destroy()
+            end
+        end
+    end,
+})
+
+local function ApplyTESP(obj)
+    if NamesCCG[obj.Name] then
+        local humanoid = obj:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.NameDisplayDistance = Library.Options.CCGTESPDist.Value
+            humanoid.HealthDisplayDistance = Library.Options.CCGTESPDist.Value
+        end
+    end
+end
+
+TabGroup:AddToggle("CCGTESP", {
+    Text = "Text",
+    Default = false,
+    Callback = function(Value)
+        if Script.Connections.CCGTESP then
+            Script.Connections.CCGTESP:Disconnect()
+            Script.Connections.CCGTESP = nil
+        end
+        if Value then
+            for _, descendant in pairs(workspace.NPCSpawns:GetDescendants()) do
+                ApplyTESP(descendant)
+            end
+            Script.Connections.CCGTESP = workspace.NPCSpawns.DescendantAdded:Connect(function(newObj)
+                task.delay(0.1, function()
+                    ApplyTESP(newObj)
+                end)
+            end)
+        else
+            for _, descendant in pairs(workspace.NPCSpawns:GetDescendants()) do
+                if NamesCCG[descendant.Name] then
+                    local humanoid = descendant:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid.NameDisplayDistance = 100
+                        humanoid.HealthDisplayDistance = 100
+                    end
+                end
+            end
+        end
+    end,
+})
+
+TabGroup:AddSlider("CCGTESPDist", {
+    Text = "Text distance",
+    Default = 100,
+    Min = 0,
+    Max = 5000,
+    Rounding = 0,
+    Callback = function(Value)
+        for _, descendant in pairs(workspace.NPCSpawns:GetDescendants()) do
+            ApplyTESP(descendant)
+        end
+    end,
+})
+end,
+
+ESPPlayer = function(...)
 local TabGroup: ObsidianGroupBox, Script: ScriptType, Library: Obsidian = ...
 local Players = game:GetService("Players")
 local lplr = Players.LocalPlayer
 
-local function PlayerESP(player: Player)
+TabGroup:AddLabel("Color"):AddColorPicker("PlayerESPColor", {
+    Default = Color3.fromRGB(255, 255, 255),
+    Callback = function(Value)
+        for _, esp in pairs(Script.HighlightESPTables["Player"]) do
+            esp.SetColor(Value)
+        end
+    end,
+})
+
+local function ApplyHESP(player: Player)
     local char = player.Character
     if not char then
         return
@@ -243,8 +450,8 @@ local function PlayerESP(player: Player)
     })
 end
 
-TabGroup:AddToggle("PlayerESP", {
-    Text = "Player",
+TabGroup:AddToggle("PlayerHESP", {
+    Text = "Highlight",
     Default = false,
     Callback = function(Value)
         if Value then
@@ -252,19 +459,12 @@ TabGroup:AddToggle("PlayerESP", {
                 if player == lplr then
                     continue
                 end
-                PlayerESP(player)
+                ApplyHESP(player)
             end
         else
-            for _, esp in pairs(Script.HighlightESPTable["Player"]) do
+            for _, esp in pairs(Script.HighlightESPTables["Player"]) do
                 esp.Destroy()
             end
-        end
-    end,
-}):AddColorPicker("PlayerESPColor", {
-    Default = Color3.fromRGB(255, 255, 255),
-    Callback = function(Value)
-        for _, esp in pairs(Script.HighlightESPTable["Player"]) do
-            esp.SetColor(Value)
         end
     end,
 })
@@ -274,15 +474,15 @@ local function SetupPlayerConnection(player: Player)
         return
     end
     if player.Character then
-        if Library.Toggles.PlayerESP.Value then
-            PlayerESP(player)
+        if Library.Toggles.PlayerHESP.Value then
+            ApplyHESP(player)
         end
     end
 
     Script.Connections.PlayerCharAdded[player.Name] = player.CharacterAdded:Connect(function(newCharacter)
         task.delay(0.1, function()
-            if Library.Toggles.PlayerESP.Value then
-                PlayerESP(player)
+            if Library.Toggles.PlayerHESP.Value then
+                ApplyHESP(player)
             end
         end)
     end)
@@ -292,7 +492,129 @@ for _, player in pairs(Players:GetPlayers()) do
     SetupPlayerConnection(player)
 end
 Script.Connections.PlayerAdded = Players.PlayerAdded:Connect(SetupPlayerConnection)
-Script.Connections.PlayerRemoved = Players.PlayerRemoving:Connect(function(player: Player) end)
+
+local function FindPlayerStatus(object: Instance): Instance?
+    if not object then
+        return nil
+    end
+    for _, descendant in object:GetDescendants() do
+        if descendant.Name == "PlayerStatus" then
+            return descendant
+        end
+    end
+    return nil
+end
+
+TabGroup:AddToggle("PlayerTESP", {
+    Text = "Text",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            for _, player in pairs(Players:GetPlayers()) do
+                if player == lplr then
+                    continue
+                end
+
+                local PlayerStatus = FindPlayerStatus(player.Character)
+                if PlayerStatus then
+                    PlayerStatus.AlwaysOnTop = true
+                    PlayerStatus.MaxDistance = Library.Options.PlayerTESPDist.Value
+                end
+                Script.Connections.PlayerTextAdded[player.Name] = player.CharacterAdded:Connect(function(newChar)
+                    -- warn(player.name .. " Character added")
+                    task.delay(1, function()
+                        local PlayerStatus = FindPlayerStatus(newChar)
+                        if PlayerStatus then
+                            PlayerStatus.AlwaysOnTop = true
+                            PlayerStatus.MaxDistance = Library.Options.PlayerTESPDist.Value
+                        else
+                            -- warn("playerStatus not found :(")
+                        end
+                    end)
+                end)
+            end
+        else
+            for _, player in pairs(Players:GetPlayers()) do
+                if player == lplr then
+                    continue
+                end
+                if Script.Connections.PlayerTextAdded[player.Name] then
+                    Script.Connections.PlayerTextAdded[player.Name]:Disconnect()
+                    Script.Connections.PlayerTextAdded[player.Name] = nil
+                end
+                local PlayerStatus = FindPlayerStatus(player.Character)
+                if PlayerStatus then
+                    PlayerStatus.AlwaysOnTop = false
+                    PlayerStatus.MaxDistance = 400
+                end
+            end
+        end
+    end,
+})
+
+TabGroup:AddSlider("PlayerTESPDist", {
+    Text = "Text distance",
+    Default = 100,
+    Min = 0,
+    Max = 5000,
+    Rounding = 0,
+    Callback = function(Value)
+        if Library.Toggles.PlayerTESP.Value then
+            for _, player in pairs(Players:GetPlayers()) do
+                if player == lplr then
+                    continue
+                end
+
+                local PlayerStatus = FindPlayerStatus(player.Character)
+                if PlayerStatus then
+                    PlayerStatus.MaxDistance = Library.Options.PlayerTESPDist.Value
+                end
+            end
+        end
+    end,
+})
+end,
+
+ESPSettings = function(...)
+local TabGroup: ObsidianGroupBox, Script: ScriptType, _: Obsidian = ...
+
+TabGroup:AddSlider("ESPFillTransparency", {
+    Text = "Fill Transparency",
+    Default = 0.75,
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    Callback = function(Value)
+        for _, espTable in pairs(Script.HighlightESPTables) do
+            for _, esp in pairs(espTable) do
+                esp.SetFillTransparency(Value)
+            end
+        end
+    end,
+})
+
+TabGroup:AddSlider("ESPOutlineTransparency", {
+    Text = "Outline Transparency",
+    Default = 0,
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    Callback = function(Value)
+        for _, espTable in pairs(Script.HighlightESPTables) do
+            for _, esp in pairs(espTable) do
+                esp.SetOutlineTransparency(Value)
+            end
+        end
+    end,
+})
+
+TabGroup:AddSlider("ESPTextSize", {
+    Text = "Text Size",
+    Default = 22,
+    Min = 14,
+    Max = 30,
+    Rounding = 0,
+})
 end,
 
 Menu = function(...)
@@ -344,7 +666,6 @@ local TabGroup: ObsidianGroupBox, Script: ScriptType, Library: Obsidian = ...
 local Players = game:GetService("Players")
 local lplr = Players.LocalPlayer
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 TabGroup:AddSlider("SpeedSlider", {
     Text = "Walk Speed",
@@ -444,22 +765,48 @@ TabGroup:AddToggle("Noclip", {
     SyncToggleState = true,
 })
 
-TabGroup:AddToggle("InfiniteJump", {
-    Text = "Infinite Jump",
+local function ToggleFOV(Value)
+    if Value and not workspace.CurrentCamera then
+        Script.Functions.Alert("Camera instance not found :(")
+        Library.Toggles.FOVToggle:SetValue(false)
+        return
+    end
+    if Value then
+        Script.Temp.OldFOV = workspace.CurrentCamera.FieldOfView
+        workspace.CurrentCamera.FieldOfView = Library.Options.FOVSlider.Value :: number
+    else
+        if Script.Temp.OldFOV then
+            workspace.CurrentCamera.FieldOfView = Script.Temp.OldFOV
+            Script.Temp.OldFOV = nil
+        end
+    end
+end
+
+local function ChangeFOV(Value)
+    if not workspace.CurrentCamera then
+        Script.Functions.Alert("Camera instance not found :(")
+        Library.Toggles.FOVToggle:SetValue(false)
+        return
+    end
+    if Library.Toggles.FOVToggle.Value then
+        workspace.CurrentCamera.FieldOfView = Value
+    end
+end
+
+TabGroup:AddToggle("FOVToggle", {
+    Text = "FOV",
     Default = false,
-    Callback = function(Value)
-        if Script.Connections.InfiniteJumpConnect then
-            Script.Connections.InfiniteJumpConnect:Disconnect()
-        end
-        if not Value then
-            return
-        end
-        Script.Connections.InfiniteJumpConnect = UserInputService.JumpRequest:Connect(function()
-            if lplr.Character and lplr.Character:FindFirstChild("Humanoid") then
-                lplr.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-            end
-        end)
-    end,
+    Callback = ToggleFOV,
+})
+
+TabGroup:AddSlider("FOVSlider", {
+    Text = "FOV",
+    Default = 60,
+    Min = 10,
+    Max = 120,
+    Rounding = 1,
+    Compact = true,
+    Callback = ChangeFOV,
 })
 end,
 }
@@ -535,17 +882,18 @@ local Window = Library:CreateWindow({
 local Tabs = {
     AutoTrain = Window:AddTab("Auto Train", "gamepad-2"),
     ESP = Window:AddTab("ESP", "eye"),
-    Other = Window:AddTab("Other", "settings"),
+    Other = Window:AddTab("Other", "wrench"),
     Script = Window:AddTab("Script", "sliders-horizontal"),
 }
 
 local TabGroups = {
+    ESPSettings = Tabs.ESP:AddLeftGroupbox("Settings", "settings"),
+    ESPPlayer = Tabs.ESP:AddLeftGroupbox("Player", "person-standing"),
+    ESPCCG = Tabs.ESP:AddLeftGroupbox("CCG", "bird"),
+    ESPAogiri = Tabs.ESP:AddLeftGroupbox("Aogiri", "beef"),
+
     Player = Tabs.Other:AddLeftGroupbox("Player", "user"),
     Checkpoint = Tabs.Other:AddRightGroupbox("Checkpoint", "skull"),
-    FOV = Tabs.Other:AddRightGroupbox("FOV settings", "user"),
-
-    MainESP = Tabs.Other:AddLeftGroupbox("Main ESP", "eye"),
-    ESPSettings = Tabs.ESP:AddRightGroupbox("ESP Settings", "sliders"),
 
     Menu = Tabs.Script:AddRightGroupbox("Menu", "menu"),
 }
@@ -575,17 +923,18 @@ local Script: ScriptType = {
     repo = repo,
     Connections = {
         PlayerCharAdded = {},
+        PlayerTextAdded = {},
     },
     Tasks = {},
     Temp = {},
     Functions = nil,
-    HighlightESPTable = {
+    HighlightESPTables = {
         Player = {},
         Boss = {},
         Aogiri = {},
         CCG = {},
     },
-    TextESPTable = {
+    TextESPTables = {
         Player = {},
         Boss = {},
         Aogiri = {},
@@ -596,11 +945,11 @@ local Script: ScriptType = {
     ThemeManager = ThemeManager,
 }
 
-Script.ESP = ESP(Script, Library)
 Script.Functions = Functions(Script, Library)
+Script.ESP = ESP(Script, Library)
 
-for TabGroup, group in pairs(GroupFunctions) do
-    group(TabGroups[TabGroup], Script, Library)
+for TabName, TabGroup in pairs(TabGroups) do
+    GroupFunctions[TabName](TabGroup, Script, Library)
 end
 
 Library:OnUnload(Script.Functions.OnUnload)

@@ -5,6 +5,8 @@ export type BaseESP = {
     Object: Instance,
     Connections: {[any]: RBXScriptConnection},
     SetColor: (Color3) -> (),
+    SetFillTransparency: (number) -> (),
+    SetOutlineTransparency: (number) -> (),
     Destroy: () -> (),
     GiveSignal: (RBXScriptConnection) -> ()
 }
@@ -15,7 +17,9 @@ export type TextESP = BaseESP & {
 }
 
 export type HighlightESP = BaseESP & {
-    Highlights: {}
+    Highlights: {},
+    OutlineTransparency: number,
+    FillTransparency: number,
 }
 
 export type BaseESPArgs = {
@@ -51,13 +55,13 @@ export type ScriptType = {
 	Temp: {[string]: any},
     Functions: FunctionMap,
     ESP: ESPMap,
-    HighlightESPTable: {
+    HighlightESPTables: {
         Player: { HighlightESP? },
         Boss: { HighlightESP? },
         Aogiri: { HighlightESP? },
         CCG: { HighlightESP? },
     },
-    TextESPTable: {
+    TextESPTables: {
         Player: { TextESP? },
         Boss: { TextESP? },
         Aogiri: { TextESP? },
@@ -71,6 +75,10 @@ declare getgenv: () -> {
     shared: {
         RoGhoul_Library: Obsidian?
     }
+}
+
+declare workspace: Workspace & {
+    NPCSpawns: any
 }
 
 declare ESP: (Script: ScriptType, Library: Obsidian) -> ESPMap

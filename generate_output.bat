@@ -51,5 +51,5 @@ if exist "main.luau" (
 
 echo.
 echo [OK] File created: %output%
-copy "%output%" "C:\Users\Admin\AppData\Local\LX63\workspace\%output%" /Y
+copy "%output%" "C:\Users\PC\AppData\Local\LX63\workspace\%output%" /Y
 exit /b

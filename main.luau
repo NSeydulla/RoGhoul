@@ -69,16 +69,18 @@ local Window = Library:CreateWindow({
 local Tabs = {
     AutoTrain = Window:AddTab("Auto Train", "gamepad-2"),
     ESP = Window:AddTab("ESP", "eye"),
-    Other = Window:AddTab("Other", "settings"),
+    Other = Window:AddTab("Other", "wrench"),
     Script = Window:AddTab("Script", "sliders-horizontal"),
 }
 
 local TabGroups = {
+    ESPSettings = Tabs.ESP:AddLeftGroupbox("Settings", "settings"),
+    ESPPlayer = Tabs.ESP:AddLeftGroupbox("Player", "person-standing"),
+    ESPCCG = Tabs.ESP:AddLeftGroupbox("CCG", "bird"),
+    ESPAogiri = Tabs.ESP:AddLeftGroupbox("Aogiri", "beef"),
+
     Player = Tabs.Other:AddLeftGroupbox("Player", "user"),
     Checkpoint = Tabs.Other:AddRightGroupbox("Checkpoint", "skull"),
-    FOV = Tabs.Other:AddRightGroupbox("FOV settings", "user"),
-
-    MainESP = Tabs.ESP:AddLeftGroupbox("Main ESP", "eye"),
 
     Menu = Tabs.Script:AddRightGroupbox("Menu", "menu"),
 }
@@ -108,17 +110,18 @@ local Script: ScriptType = {
     repo = repo,
     Connections = {
         PlayerCharAdded = {},
+        PlayerTextAdded = {},
     },
     Tasks = {},
     Temp = {},
     Functions = nil,
-    HighlightESPTable = {
+    HighlightESPTables = {
         Player = {},
         Boss = {},
         Aogiri = {},
         CCG = {},
     },
-    TextESPTable = {
+    TextESPTables = {
         Player = {},
         Boss = {},
         Aogiri = {},
@@ -129,11 +132,11 @@ local Script: ScriptType = {
     ThemeManager = ThemeManager,
 }
 
-Script.ESP = ESP(Script, Library)
 Script.Functions = Functions(Script, Library)
+Script.ESP = ESP(Script, Library)
 
-for TabGroup, group in pairs(GroupFunctions) do
-    group(TabGroups[TabGroup], Script, Library)
+for TabName, TabGroup in pairs(TabGroups) do
+    GroupFunctions[TabName](TabGroup, Script, Library)
 end
 
 Library:OnUnload(Script.Functions.OnUnload)

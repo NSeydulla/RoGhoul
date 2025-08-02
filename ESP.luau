@@ -1,4 +1,4 @@
-local Script: ScriptType, _: Obsidian = ...
+local Script: ScriptType, Library: Obsidian = ...
 local RunService = game:GetService("RunService")
 
 return {
@@ -11,23 +11,27 @@ return {
             Type = args.Type or "None",
             Object = args.Object,
             Color = args.Color or Color3.new(),
+            FillTransparency = Library.Options.ESPFillTransparency.Value,
+            OutlineTransparency = Library.Options.ESPOutlineTransparency.Value,
             Highlights = {},
             Connections = {},
             Destroy = function() end,
             SetColor = function() end,
             GiveSignal = function() end,
+            SetFillTransparency = function() end,
+            SetOutlineTransparency = function() end,
         }
 
-        local tableIndex = #Script.HighlightESPTable[self.Type] + 1
+        local tableIndex = #Script.HighlightESPTables[self.Type] + 1
 
         local highlight = Instance.new("Highlight")
         do
             highlight.Adornee = self.Object
             highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
             highlight.FillColor = self.Color
-            highlight.FillTransparency = 0.5
+            highlight.FillTransparency = self.FillTransparency
             highlight.OutlineColor = self.Color
-            highlight.OutlineTransparency = 0.5
+            highlight.OutlineTransparency = self.OutlineTransparency
             highlight.Enabled = true
             highlight.Parent = self.Object
         end
@@ -43,6 +47,22 @@ return {
             end
         end
 
+        self.SetFillTransparency = function(newTransparency: number)
+            self.FillTransparency = newTransparency
+
+            for _, highlight in pairs(self.Highlights) do
+                highlight.FillTransparency = newTransparency
+            end
+        end
+
+        self.SetOutlineTransparency = function(newTransparency: number)
+            self.OutlineTransparency = newTransparency
+
+            for _, highlight in pairs(self.Highlights) do
+                highlight.OutlineTransparency = newTransparency
+            end
+        end
+
         self.Destroy = function()
             for _, conn in pairs(self.Connections) do
                 pcall(function()
@@ -53,8 +73,8 @@ return {
             for _, highlight in pairs(self.Highlights) do
                 highlight:Destroy()
             end
-            if Script.HighlightESPTable[self.Type][tableIndex] then
-                Script.HighlightESPTable[self.Type][tableIndex] = nil
+            if Script.HighlightESPTables[self.Type][tableIndex] then
+                Script.HighlightESPTables[self.Type][tableIndex] = nil
             end
         end
 
@@ -69,7 +89,7 @@ return {
             end
         end))
 
-        Script.HighlightESPTable[self.Type][tableIndex] = self
+        Script.HighlightESPTables[self.Type][tableIndex] = self
         return self
     end,
 }

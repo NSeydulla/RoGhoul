@@ -44,12 +44,12 @@ return {
                 end
             end)
         end
-        for _, espType in pairs(Script.HighlightESPTable) do
+        for _, espType in pairs(Script.HighlightESPTables) do
             for _, esp in pairs(espType) do
                 pcall(esp.Destroy)
             end
         end
-        for _, espType in pairs(Script.TextESPTable) do
+        for _, espType in pairs(Script.TextESPTables) do
             for _, esp in pairs(espType) do
                 pcall(esp.Destroy)
             end

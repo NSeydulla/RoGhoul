@@ -3,6 +3,7 @@ export type ObsidianOption = {
     Value: string | number | Color3,
     SetValues: (self: ObsidianOption, Values: { string }) -> (),
     SetValue: (self: ObsidianOption, Value: string?) -> (),
+    Transparency: number,
 }
 
 export type ObsidianToggle = {
@@ -15,7 +16,7 @@ export type ObsidianToggle = {
             Text: string,
             SyncToggleState: boolean,
         }
-    ) -> (),
+    ) -> ObsidianToggle,
     AddColorPicker: (
         self: ObsidianToggle,
         Idx: string,
@@ -23,7 +24,7 @@ export type ObsidianToggle = {
             Default: Color3,
             Callback: ((Value: Color3) -> ())?,
         }
-    ) -> (),
+    ) -> ObsidianToggle,
     Value: boolean,
     SetValue: (self: ObsidianToggle, Value: boolean) -> (),
     Callback: (Value: boolean) -> (),
@@ -38,7 +39,7 @@ export type ObsidianLabel = {
             Text: string,
             NoUI: boolean?,
         }
-    ) -> ObsidianOption,
+    ) -> ObsidianLabel,
     AddColorPicker: (
         self: ObsidianLabel,
         Idx: string,
@@ -46,7 +47,7 @@ export type ObsidianLabel = {
             Default: Color3,
             Callback: ((Value: Color3) -> ())?,
         }
-    ) -> ObsidianOption,
+    ) -> ObsidianLabel,
 }
 
 export type ObsidianToggleInfo = {

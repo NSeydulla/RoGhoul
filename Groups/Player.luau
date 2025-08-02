@@ -100,3 +100,47 @@ TabGroup:AddToggle("Noclip", {
     Text = "Noclip",
     SyncToggleState = true,
 })
+
+local function ToggleFOV(Value)
+    if Value and not workspace.CurrentCamera then
+        Script.Functions.Alert("Camera instance not found :(")
+        Library.Toggles.FOVToggle:SetValue(false)
+        return
+    end
+    if Value then
+        Script.Temp.OldFOV = workspace.CurrentCamera.FieldOfView
+        workspace.CurrentCamera.FieldOfView = Library.Options.FOVSlider.Value :: number
+    else
+        if Script.Temp.OldFOV then
+            workspace.CurrentCamera.FieldOfView = Script.Temp.OldFOV
+            Script.Temp.OldFOV = nil
+        end
+    end
+end
+
+local function ChangeFOV(Value)
+    if not workspace.CurrentCamera then
+        Script.Functions.Alert("Camera instance not found :(")
+        Library.Toggles.FOVToggle:SetValue(false)
+        return
+    end
+    if Library.Toggles.FOVToggle.Value then
+        workspace.CurrentCamera.FieldOfView = Value
+    end
+end
+
+TabGroup:AddToggle("FOVToggle", {
+    Text = "FOV",
+    Default = false,
+    Callback = ToggleFOV,
+})
+
+TabGroup:AddSlider("FOVSlider", {
+    Text = "FOV",
+    Default = 60,
+    Min = 10,
+    Max = 120,
+    Rounding = 1,
+    Compact = true,
+    Callback = ChangeFOV,
+})
